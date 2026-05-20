@@ -1,138 +1,22 @@
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/router";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [products, setProducts] = useState([]);
-  const [stats, setStats] = useState({
-    totalProducts: 0,
-    totalSales: 0,
-    totalRevenue: 0,
-  });
+  const [form, setForm] = useState({ name: "", description: "", price: "", image_url: "", stock: "" });
 
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    if (session?.user?.role === "merchant") {
-      setProducts([
-        { id: 1, name: "سماعة بلوتوث", price: 299, sales: 15, stock: true },
-        { id: 2, name: "ساعة ذكية", price: 599, sales: 8, stock: true },
-      ]);
-      setStats({ totalProducts: 2, totalSales: 23, totalRevenue: 9592 });
-    }
-  }, [session, status, router]);
+  async function load() { const res = await fetch('/api/products'); if (res.ok) setProducts(await res.json()); }
+  useEffect(() => { if (status === 'authenticated') load(); }, [status]);
 
-  if (status === "loading")
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl">جاري التحميل...</p>
-      </div>
-    );
-  if (session?.user?.role !== "merchant")
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-xl text-red-600 mb-4">⛔ مش مصرحلك بالدخول هنا</p>
-          <Link href="/" className="text-blue-600 underline">
-            الرجوع للرئيسية
-          </Link>
-        </div>
-      </div>
-    );
+  async function submit(e) {
+    e.preventDefault();
+    const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+    if (res.ok) { setForm({ name: "", description: "", price: "", image_url: "", stock: "" }); load(); }
+  }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-blue-600 text-white py-4">
-        <div className="max-w-6xl mx-auto px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">لوحة التحكم 👨‍💼</h1>
-          <div className="flex gap-4">
-            <span>👤 {session.user?.name}</span>
-            <button
-              onClick={() => signOut({ callbackUrl: "/" })}
-              className="bg-red-600 px-4 py-2 rounded hover:bg-red-700"
-            >
-              خروج 🚪
-            </button>
-          </div>
-        </div>
-      </header>
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-gray-600 mb-2">إجمالي المنتجات</h3>
-            <p className="text-3xl font-bold text-blue-600">
-              {stats.totalProducts}
-            </p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-gray-600 mb-2">إجمالي المبيعات</h3>
-            <p className="text-3xl font-bold text-green-600">
-              {stats.totalSales}
-            </p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-gray-600 mb-2">إجمالي الإيرادات</h3>
-            <p className="text-3xl font-bold text-purple-600">
-              {stats.totalRevenue} جنيه
-            </p>
-          </div>
-        </div>
-        <div className="mb-8 flex gap-4">
-          <button className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700">
-            إضافة منتج جديد ➕
-          </button>
-          <Link
-            href="/"
-            className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700"
-          >
-            الذهاب للمتجر 🛒
-          </Link>
-        </div>
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-bold">منتجاتي 📦</h2>
-          </div>
-          <table className="w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-4 text-right">المنتج</th>
-                <th className="p-4 text-right">السعر</th>
-                <th className="p-4 text-right">المبيعات</th>
-                <th className="p-4 text-right">الحالة</th>
-                <th className="p-4 text-right">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id} className="border-b hover:bg-gray-50">
-                  <td className="p-4 font-bold">{product.name}</td>
-                  <td className="p-4">{product.price} جنيه</td>
-                  <td className="p-4">{product.sales}</td>
-                  <td className="p-4">
-                    <span
-                      className={`px-3 py-1 rounded ${product.stock ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                    >
-                      {product.stock ? "متوفر ✅" : "نفذت الكمية ❌"}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex gap-2">
-                      <button className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
-                        تعديل ✏️
-                      </button>
-                      <button className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">
-                        حذف 🗑️
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </main>
-    </div>
-  );
+  if (status !== 'authenticated') return <div className="p-8">سجل دخولك أولاً.</div>;
+  if (!["merchant", "admin"].includes(session.user.role)) return <div className="p-8">هذه اللوحة للتجار فقط.</div>;
+
+  return <div className="p-8" dir="rtl"><h1 className="text-2xl font-bold mb-4">لوحة التاجر</h1><form onSubmit={submit} className="grid gap-2 max-w-xl mb-6"><input className="border p-2" placeholder="اسم المنتج" value={form.name} onChange={(e)=>setForm({...form,name:e.target.value})}/><textarea className="border p-2" placeholder="الوصف" value={form.description} onChange={(e)=>setForm({...form,description:e.target.value})}/><input className="border p-2" placeholder="السعر" value={form.price} onChange={(e)=>setForm({...form,price:e.target.value})}/><input className="border p-2" placeholder="رابط صورة المنتج" value={form.image_url} onChange={(e)=>setForm({...form,image_url:e.target.value})}/><input className="border p-2" placeholder="المخزون" value={form.stock} onChange={(e)=>setForm({...form,stock:e.target.value})}/><button className="bg-green-700 text-white p-2 rounded">إضافة منتج</button></form><div className="grid md:grid-cols-3 gap-4">{products.map((p)=><div key={p.id} className="bg-white rounded shadow p-3"><img src={p.image_url || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'} alt={p.name} className="w-full h-40 object-cover rounded"/><h3 className="font-bold mt-2">{p.name}</h3><p>{p.description}</p><p>{p.price} جنيه</p><p>التاجر: {p.merchant_name}</p></div>)}</div></div>;
 }
